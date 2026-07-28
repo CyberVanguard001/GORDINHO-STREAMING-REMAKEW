@@ -290,11 +290,11 @@
         return;
       }
 
-      catalogDiv.innerHTML = '<p style="color: var(--text-gray);">Buscando conteúdo no servidor local...</p>';
+      catalogDiv.innerHTML = '<p style="color: var(--text-gray);">Buscando conteúdo no servidor do Termux...</p>';
 
       try {
-        // Conecta direto com o servidor Node.js rodando no Termux
-        const resposta = await fetch(`http://localhost:3000/api/search?q=${encodeURIComponent(termo)}`);
+        // Conecta com o túnel público do Serveo gerado no Termux
+        const resposta = await fetch(`https://0418f048df6ce178-201-26-5-224.serveousercontent.com/api/search?q=${encodeURIComponent(termo)}`);
         const resultados = await resposta.json();
 
         if (!resultados || resultados.length === 0) {
@@ -329,7 +329,7 @@
         });
 
       } catch (erro) {
-        catalogDiv.innerHTML = '<p style="color: #E50914;">Erro ao conectar com o servidor Node.js no Termux.</p>';
+        catalogDiv.innerHTML = '<p style="color: #E50914;">Erro ao conectar com o servidor do Termux. Verifique se o Serveo e o Node.js estão abertos.</p>';
       }
     }
 
@@ -354,7 +354,6 @@
 
       const iframe = document.getElementById('videoPlayerFrame');
       
-      // Servidores de vídeo integrados
       if (opcao === 1) {
         iframe.src = `https://multiembed.mov/?tmdb=1&${currentMediaType === 'movie' ? 'video_id' : 'tv'}=${currentTmdbId}`;
       } else if (opcao === 2) {
