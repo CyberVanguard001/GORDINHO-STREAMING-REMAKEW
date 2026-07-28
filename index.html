@@ -305,15 +305,16 @@
       }
     }
 
-    function abrirPlayerAutomatico(titulo, idFilme) {
+        function abrirPlayerAutomatico(titulo, idFilme) {
       document.getElementById('playingTitle').innerText = titulo;
       const iframe = document.getElementById('videoPlayerFrame');
       
-      // Conecta automaticamente ao player incorporado universal usando o ID do TMDb (Padrão similar a players abertos da web)
-      iframe.src = `https://vidsrc.xyz/embed/movie?tmdb=${idFilme}`;
+      // Usando uma rota de embed alternativa e mais estável
+      iframe.src = `https://vidsrc.me/embed/movie?tmdb=${idFilme}`;
       
       document.getElementById('playerModal').style.display = 'flex';
     }
+    
 
   </script>
 </body>
