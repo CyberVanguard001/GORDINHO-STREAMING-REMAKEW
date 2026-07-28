@@ -294,7 +294,7 @@
 
       try {
         // Conecta com o túnel público do Serveo gerado no Termux
-        const resposta = await fetch(`https://0418f048df6ce178-201-26-5-224.serveousercontent.com/api/search?q=${encodeURIComponent(termo)}`);
+        const resposta = await fetch(`https://f94bc3020b3dc9f2-201-26-5-224.serveousercontent.com/api/search?q=${encodeURIComponent(termo)}`);
         const resultados = await resposta.json();
 
         if (!resultados || resultados.length === 0) {
