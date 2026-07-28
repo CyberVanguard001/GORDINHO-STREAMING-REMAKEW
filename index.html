@@ -170,7 +170,7 @@
       overflow: hidden;
     }
 
-    /* Modal do Player Avançado */
+    /* Modal do Player com Bloqueio de Anúncios */
     .modal-overlay {
       position: fixed;
       top: 0; left: 0; width: 100%; height: 100%;
@@ -244,11 +244,11 @@
     <div class="logo">GS <span>GORDINHO STREAMING</span></div>
   </header>
 
-  <!-- PAINEL DE PESQUISA AUTOMÁTICA -->
+  <!-- PAINEL DE PESQUISA -->
   <div class="search-panel">
-    <h2>Explorar Filmes e Séries (Automático)</h2>
+    <h2>Explorar Filmes e Séries (PT-BR)</h2>
     <div class="form-group">
-      <input type="text" id="searchInput" placeholder="Digite o nome em português (Ex: Vingadores, Avatar...)">
+      <input type="text" id="searchInput" placeholder="Digite o nome (Ex: Vingadores, Batman...)">
       <button onclick="pesquisarMidia()">Pesquisar</button>
     </div>
   </div>
@@ -257,30 +257,31 @@
   <div class="catalog-section">
     <h2>Resultados da Busca</h2>
     <div class="movie-grid" id="movieCatalog">
-      <p style="color: var(--text-gray);">Digite um nome acima para buscar automaticamente na web.</p>
+      <p style="color: var(--text-gray);">Digite um nome acima para buscar.</p>
     </div>
   </div>
 
-  <!-- PLAYER COM OPÇÃO DE TROCA DE SERVIDOR -->
+  <!-- MODAL DO PLAYER -->
   <div class="modal-overlay" id="playerModal">
     <div class="player-box">
       <div class="player-header">
         <h3 id="playingTitle" style="color: var(--primary-red); font-size: 1.1rem;">Carregando...</h3>
         <div class="server-selector">
-          <button class="server-btn active" onclick="trocarServidor(1)">Servidor 1</button>
-          <button class="server-btn" onclick="trocarServidor(2)">Servidor 2</button>
-          <button class="server-btn" onclick="trocarServidor(3)">Servidor 3</button>
+          <button class="server-btn active" onclick="trocarServidor(1)">Opção 1</button>
+          <button class="server-btn" onclick="trocarServidor(2)">Opção 2</button>
+          <button class="server-btn" onclick="trocarServidor(3)">Opção 3</button>
         </div>
         <button class="close-btn" onclick="fecharPlayer()">×</button>
       </div>
-      <iframe id="videoPlayerFrame" src="" allowfullscreen></iframe>
+      <!-- Atributo sandbox ativado para bloquear pop-ups de anúncios -->
+      <iframe id="videoPlayerFrame" src="" sandbox="allow-scripts allow-same-origin allow-presentation" allowfullscreen></iframe>
     </div>
   </div>
 
   <script>
     const TMDB_API_KEY = '8e6a4fe3b8b0c240511a0c5cc382ca81';
     let currentTmdbId = null;
-    let currentTitle = '';
+    let currentMediaType = 'movie';
 
     async function pesquisarMidia() {
       const termo = document.getElementById('searchInput').value.trim();
@@ -291,14 +292,12 @@
         return;
       }
 
-      catalogDiv.innerHTML = '<p style="color: var(--text-gray);">Buscando conteúdo em português...</p>';
+      catalogDiv.innerHTML = '<p style="color: var(--text-gray);">Buscando conteúdo...</p>';
 
       try {
-        // Busca priorizando títulos em Português do Brasil (language=pt-BR)
         const resposta = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${TMDB_API_KEY}&language=pt-BR&query=${encodeURIComponent(termo)}`);
         const dados = await resposta.json();
 
-        // Filtra apenas filmes e séries que possuem capa
         const resultados = dados.results.filter(item => (item.media_type === 'movie' || item.media_type === 'tv') && item.poster_path);
 
         if (resultados.length === 0) {
@@ -313,11 +312,11 @@
           card.className = 'movie-card';
           
           const id = item.id;
-          const titulo = item.title || item.name; // Trata se é filme ou série
+          const titulo = item.title || item.name;
           const poster = `https://image.tmdb.org/t/p/w500${item.poster_path}`;
           const rating = item.vote_average ? item.vote_average.toFixed(1) : '0.0';
           const overview = item.overview || 'Sinopse não disponível.';
-          const tipo = item.media_type; // 'movie' ou 'tv'
+          const tipo = item.media_type;
 
           card.onclick = () => abrirPlayer(titulo, id, tipo);
 
@@ -340,18 +339,16 @@
     function abrirPlayer(titulo, id, tipo) {
       currentTmdbId = id;
       currentMediaType = tipo;
-      currentTitle = titulo;
       
       document.getElementById('playingTitle').innerText = titulo;
-      trocarServidor(1); // Inicia no Servidor 1 padrão
+      trocarServidor(1);
       document.getElementById('playerModal').style.display = 'flex';
     }
 
-    function trocarServidor(numeroServidor) {
-      // Atualiza os botões visuais ativos
+    function trocarServidor(opcao) {
       const botoes = document.querySelectorAll('.server-btn');
       botoes.forEach((btn, index) => {
-        if (index + 1 === numeroServidor) {
+        if (index + 1 === opcao) {
           btn.classList.add('active');
         } else {
           btn.classList.remove('active');
@@ -360,15 +357,15 @@
 
       const iframe = document.getElementById('videoPlayerFrame');
       
-      // URLs de servidores públicos alternativos com suporte a áudio/legenda em Português
-      if (numeroServidor === 1) {
-        // Servidor Principal (Força áudio pt-BR se disponível na fonte)
-        iframe.src = `https://vidsrc.xyz/embed/${currentMediaType}?tmdb=${currentTmdbId}&ds_lang=pt`;
-      } else if (numeroServidor === 2) {
-        // Servidor de Backup 1
-        iframe.src = `https://vidsrc.me/embed/${currentMediaType}?tmdb=${currentTmdbId}`;
+      // Rotas alternativas focadas em players limpos baseados no ID do TMDb
+      if (opcao === 1) {
+        // MultiEmbed Principal com suporte a áudio pt
+        iframe.src = `https://multiembed.mov/?tmdb=1&${currentMediaType === 'movie' ? 'video_id' : 'tv'}=${currentTmdbId}&s=1&e=1`;
+      } else if (opcao === 2) {
+        // SuperEmbed alternativo
+        iframe.src = `https://apanha.cc/embed/${currentMediaType}/${currentTmdbId}`;
       } else {
-        // Servidor de Backup 2 (Embed universal alternativo)
+        // O Servidor que funcionou para você anteriormente (MultiEmbed genérico)
         iframe.src = `https://multiembed.mov/?video_id=${currentTmdbId}&tmdb=1`;
       }
     }
