@@ -170,7 +170,7 @@
       overflow: hidden;
     }
 
-    /* Modal do Player com Bloqueio de Anúncios */
+    /* Modal do Player */
     .modal-overlay {
       position: fixed;
       top: 0; left: 0; width: 100%; height: 100%;
@@ -267,19 +267,17 @@
       <div class="player-header">
         <h3 id="playingTitle" style="color: var(--primary-red); font-size: 1.1rem;">Carregando...</h3>
         <div class="server-selector">
-          <button class="server-btn active" onclick="trocarServidor(1)">Opção 1</button>
-          <button class="server-btn" onclick="trocarServidor(2)">Opção 2</button>
-          <button class="server-btn" onclick="trocarServidor(3)">Opção 3</button>
+          <button class="server-btn active" onclick="trocarServidor(1)">Servidor 1</button>
+          <button class="server-btn" onclick="trocarServidor(2)">Servidor 2</button>
+          <button class="server-btn" onclick="trocarServidor(3)">Servidor 3</button>
         </div>
         <button class="close-btn" onclick="fecharPlayer()">×</button>
       </div>
-      <!-- Atributo sandbox ativado para bloquear pop-ups de anúncios -->
-      <iframe id="videoPlayerFrame" src="" sandbox="allow-scripts allow-same-origin allow-presentation" allowfullscreen></iframe>
+      <iframe id="videoPlayerFrame" src="" allowfullscreen allow="autoplay; fullscreen"></iframe>
     </div>
   </div>
 
   <script>
-    const TMDB_API_KEY = '8e6a4fe3b8b0c240511a0c5cc382ca81';
     let currentTmdbId = null;
     let currentMediaType = 'movie';
 
@@ -292,15 +290,14 @@
         return;
       }
 
-      catalogDiv.innerHTML = '<p style="color: var(--text-gray);">Buscando conteúdo...</p>';
+      catalogDiv.innerHTML = '<p style="color: var(--text-gray);">Buscando conteúdo no servidor local...</p>';
 
       try {
-        const resposta = await fetch(`https://api.themoviedb.org/3/search/multi?api_key=${TMDB_API_KEY}&language=pt-BR&query=${encodeURIComponent(termo)}`);
-        const dados = await resposta.json();
+        // Conecta direto com o servidor Node.js rodando no Termux
+        const resposta = await fetch(`http://localhost:3000/api/search?q=${encodeURIComponent(termo)}`);
+        const resultados = await resposta.json();
 
-        const resultados = dados.results.filter(item => (item.media_type === 'movie' || item.media_type === 'tv') && item.poster_path);
-
-        if (resultados.length === 0) {
+        if (!resultados || resultados.length === 0) {
           catalogDiv.innerHTML = '<p style="color: var(--text-gray);">Nenhum resultado encontrado.</p>';
           return;
         }
@@ -332,7 +329,7 @@
         });
 
       } catch (erro) {
-        catalogDiv.innerHTML = '<p style="color: #E50914;">Erro ao conectar com a base de dados.</p>';
+        catalogDiv.innerHTML = '<p style="color: #E50914;">Erro ao conectar com o servidor Node.js no Termux.</p>';
       }
     }
 
@@ -357,16 +354,13 @@
 
       const iframe = document.getElementById('videoPlayerFrame');
       
-      // Rotas alternativas focadas em players limpos baseados no ID do TMDb
+      // Servidores de vídeo integrados
       if (opcao === 1) {
-        // MultiEmbed Principal com suporte a áudio pt
-        iframe.src = `https://multiembed.mov/?tmdb=1&${currentMediaType === 'movie' ? 'video_id' : 'tv'}=${currentTmdbId}&s=1&e=1`;
+        iframe.src = `https://multiembed.mov/?tmdb=1&${currentMediaType === 'movie' ? 'video_id' : 'tv'}=${currentTmdbId}`;
       } else if (opcao === 2) {
-        // SuperEmbed alternativo
-        iframe.src = `https://apanha.cc/embed/${currentMediaType}/${currentTmdbId}`;
+        iframe.src = `https://vidsrc.cc/v2/embed/${currentMediaType}/${currentTmdbId}?autoPlay=true`;
       } else {
-        // O Servidor que funcionou para você anteriormente (MultiEmbed genérico)
-        iframe.src = `https://multiembed.mov/?video_id=${currentTmdbId}&tmdb=1`;
+        iframe.src = `https://vidsrc.xyz/embed/${currentMediaType}?tmdb=${currentTmdbId}`;
       }
     }
 
