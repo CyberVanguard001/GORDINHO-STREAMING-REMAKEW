@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GORDINHO STREAMING - GS</title>
+  <style>
+    :root {
+      --bg-color: #0d0d0d;
+      --card-bg: #1a1a1a;
+      --primary-red: #e50914;
+      --hover-red: #b81d24;
+      --text-color: #ffffff;
+      --text-dim: #b3b3b3;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      padding-bottom: 50px;
+    }
+
+    /* Header */
+    header {
+      background-color: #000;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 5%;
+      border-bottom: 2px solid var(--primary-red);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo {
+      font-size: 1.8rem;
+      font-weight: bold;
+      color: var(--primary-red);
+      letter-spacing: 1px;
+    }
+
+    .logo span {
+      background-color: var(--primary-red);
+      color: #fff;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-left: 5px;
+    }
+
+    /* Section - Upload */
+    .upload-section {
+      background-color: var(--card-bg);
+      margin: 20px 5%;
+      padding: 20px;
+      border-radius: 8px;
+      border: 1px solid #333;
+    }
+
+    .upload-section h2 {
+      margin-bottom: 10px;
+      color: var(--primary-red);
+    }
+
+    .upload-box {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    input[type="file"], input[type="text"] {
+      background: #222;
+      border: 1px solid #444;
+      color: #fff;
+      padding: 10px;
+      border-radius: 4px;
+    }
+
+    button {
+      background-color: var(--primary-red);
+      color: #fff;
+      border: none;
+      padding: 10px 15px;
+      font-weight: bold;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    button:hover {
+      background-color: var(--hover-red);
+    }
+
+    /* Section - TMDb Search & Catalogs */
+    .content-section {
+      margin: 20px 5%;
+    }
+
+    .content-section h2 {
+      margin-bottom: 15px;
+      border-left: 4px solid var(--primary-red);
+      padding-left: 10px;
+    }
+
+    .grid-movies {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 20px;
+    }
+
+    .card-movie {
+      background-color: var(--card-bg);
+      border-radius: 8px;
+      overflow: hidden;
+      transition: transform 0.2s;
+      border: 1px solid #222;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card-movie:hover {
+      transform: scale(1.03);
+      border-color: var(--primary-red);
+    }
+
+    .card-movie img {
+      width: 100%;
+      height: 260px;
+      object-fit: cover;
+    }
+
+    .card-info {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      flex-grow: 1;
+      justify-content: space-between;
+    }
+
+    .card-title {
+      font-size: 1rem;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    .card-rating {
+      color: #ffd700;
+      font-weight: bold;
+      font-size: 0.9rem;
+      margin-bottom: 8px;
+    }
+
+    .card-overview {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+
+    /* Video Player Modal/Container */
+    .player-container {
+      margin: 20px 5%;
+      display: none;
+      background: #000;
+      padding: 15px;
+      border-radius: 8px;
+      border: 1px solid var(--primary-red);
+    }
+
+    video {
+      width: 100%;
+      max-height: 500px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo">GORDINHO STREAMING <span>GS</span></div>
+  </header>
+
+  <!-- Player de Vídeo Activo -->
+  <div class="player-container" id="playerContainer">
+    <h3 id="playerTitle" style="margin-bottom: 10px;">Tocando Vídeo</h3>
+    <video id="videoPlayer" controls></video>
+  </div>
+
+  <!-- Envio de Filme Local -->
+  <section class="upload-section">
+    <h2>Upload de Vídeo Local</h2>
+    <div class="upload-box">
+      <input type="text" id="videoTitleInput" placeholder="Nome do Filme/Vídeo">
+      <input type="file" id="videoFileInput" accept="video/*">
+      <button onclick="carregarVideoLocal()">Assistir Vídeo</button>
+    </div>
+  </section>
+
+  <!-- Filmes em Destaque (TMDb) -->
+  <section class="content-section">
+    <h2>Catálogo TMDb (Populares)</h2>
+    <div class="grid-movies" id="tmdbGrid">
+      <!-- Cards renderizados via JS -->
+    </div>
+  </section>
+
+  <script>
+    // Substitua 'SUA_API_KEY_AQUI' pela chave gratuita do site the-moviedb.org
+    const TMDB_API_KEY = 'SUA_API_KEY_AQUI'; 
+    const TMDB_URL = `https://api.themoviedb.org/3/movie/popular?api_key=${TMDB_API_KEY}&language=pt-BR&page=1`;
+    const IMG_PATH = 'https://image.tmdb.org/t/p/w500';
+
+    // 1. Carregar Filmes Populares do TMDb
+    async function carregarFilmesTMDb() {
+      const grid = document.getElementById('tmdbGrid');
+      
+      try {
+        const res = await fetch(TMDB_URL);
+        const data = await res.json();
+
+        if (data.results) {
+          grid.innerHTML = '';
+          data.results.forEach(filme => {
+            const card = document.createElement('div');
+            card.className = 'card-movie';
+            card.innerHTML = `
+              <img src="${filme.poster_path ? IMG_PATH + filme.poster_path : 'https://via.placeholder.com/500x750?text=Sem+Capa'}" alt="${filme.title}">
+              <div class="card-info">
+                <div>
+                  <div class="card-title">${filme.title}</div>
+                  <div class="card-rating">★ ${filme.vote_average.toFixed(1)}</div>
+                  <div class="card-overview">${filme.overview || 'Sinopse não disponível.'}</div>
+                </div>
+                <button onclick="alert('Para reproduzir filmes completos do TMDb é necessário um servidor de streaming próprio.')">Assistir Trailer</button>
+              </div>
+            `;
+            grid.appendChild(card);
+          });
+        }
+      } catch (err) {
+        grid.innerHTML = '<p style="color: var(--text-dim)">Adicione sua chave de API do TMDb no código JS para carregar as capas e avaliações automaticamente.</p>';
+      }
+    }
+
+    // 2. Tocar vídeo selecionado no celular (Sessão Atual)
+    function carregarVideoLocal() {
+      const fileInput = document.getElementById('videoFileInput');
+      const titleInput = document.getElementById('videoTitleInput');
+      const playerContainer = document.getElementById('playerContainer');
+      const videoPlayer = document.getElementById('videoPlayer');
+      const playerTitle = document.getElementById('playerTitle');
+
+      if (fileInput.files.length === 0) {
+        alert('Por favor, selecione um arquivo de vídeo.');
+        return;
+      }
+
+      const file = fileInput.files[0];
+      const fileURL = URL.createObjectURL(file);
+
+      videoPlayer.src = fileURL;
+      playerTitle.innerText = titleInput.value || file.name;
+      playerContainer.style.display = 'block';
+      videoPlayer.play();
+    }
+
+    carregarFilmesTMDb();
+  </script>
+</body>
+      </html>
+      
