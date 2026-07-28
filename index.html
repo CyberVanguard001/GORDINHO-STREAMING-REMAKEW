@@ -27,7 +27,6 @@
       padding-bottom: 50px;
     }
 
-    /* Cabeçalho */
     header {
       background-color: rgba(0, 0, 0, 0.9);
       padding: 20px 50px;
@@ -54,8 +53,7 @@
       margin-left: 5px;
     }
 
-    /* Painel de Controle (Adicionar por Link) */
-    .admin-panel {
+    .search-panel {
       background-color: var(--panel-bg);
       margin: 30px auto;
       max-width: 800px;
@@ -65,20 +63,18 @@
       box-shadow: 0 4px 15px rgba(0,0,0,0.7);
     }
 
-    .admin-panel h2 {
+    .search-panel h2 {
       margin-bottom: 15px;
       font-size: 20px;
     }
 
     .form-group {
       display: flex;
-      flex-direction: column;
-      gap: 12px;
-      margin-bottom: 15px;
+      gap: 10px;
     }
 
     input[type="text"] {
-      width: 100%;
+      flex: 1;
       padding: 12px;
       background-color: #222;
       border: 1px solid #444;
@@ -107,13 +103,6 @@
       background-color: var(--hover-red);
     }
 
-    #statusMsg {
-      font-size: 14px;
-      margin-top: 8px;
-      display: none;
-    }
-
-    /* Catálogo */
     .catalog-section {
       padding: 20px 50px;
     }
@@ -181,7 +170,7 @@
       overflow: hidden;
     }
 
-    /* Player Modal */
+    /* Modal do Player Automático */
     .modal-overlay {
       position: fixed;
       top: 0; left: 0; width: 100%; height: 100%;
@@ -195,11 +184,14 @@
     .player-box {
       width: 90%;
       max-width: 950px;
+      height: 80vh;
       background: #000;
       border: 2px solid var(--primary-red);
       border-radius: 8px;
       padding: 20px;
       position: relative;
+      display: flex;
+      flex-direction: column;
     }
 
     .close-btn {
@@ -211,13 +203,14 @@
       cursor: pointer;
       background: none;
       border: none;
+      z-index: 10;
     }
 
-    video {
+    iframe {
       width: 100%;
-      max-height: 550px;
+      height: 100%;
+      border: none;
       border-radius: 4px;
-      outline: none;
       background: #111;
     }
   </style>
@@ -228,142 +221,100 @@
     <div class="logo">GS <span>GORDINHO STREAMING</span></div>
   </header>
 
-  <!-- PAINEL DE CADASTRO POR LINK -->
-  <div class="admin-panel">
-    <h2>Adicionar Filme ao Catálogo</h2>
+  <!-- BUSCA AUTOMÁTICA -->
+  <div class="search-panel">
+    <h2>Buscar Filme ou Série na Internet</h2>
     <div class="form-group">
-      <input type="text" id="movieNameInput" placeholder="Nome exato do filme (Ex: Homem-Aranha)">
-      <input type="text" id="movieUrlInput" placeholder="Cole o link direto do vídeo (.mp4 ou link de streaming)">
+      <input type="text" id="searchInput" placeholder="Digite o nome (Ex: Vingadores, Avatar...)">
+      <button onclick="buscarFilmeAutomatico()">Pesquisar</button>
     </div>
-    <button onclick="adicionarFilme()">Puxar do TMDb e Adicionar</button>
-    <div id="statusMsg"></div>
   </div>
 
-  <!-- CATÁLOGO -->
+  <!-- CATÁLOGO DE RESULTADOS -->
   <div class="catalog-section">
-    <h2>Filmes Disponíveis</h2>
+    <h2>Resultados da Busca</h2>
     <div class="movie-grid" id="movieCatalog">
-      <!-- Os filmes adicionados aparecem aqui -->
+      <p style="color: var(--text-gray);">Digite um nome acima para procurar automaticamente.</p>
     </div>
   </div>
 
-  <!-- MODAL DO PLAYER -->
+  <!-- MODAL DO PLAYER EMBED -->
   <div class="modal-overlay" id="playerModal">
     <div class="player-box">
       <button class="close-btn" onclick="fecharPlayer()">×</button>
-      <h3 id="playingTitle" style="margin-bottom: 15px; color: var(--primary-red);"></h3>
-      <video id="mainVideoPlayer" controls autoplay></video>
+      <h3 id="playingTitle" style="margin-bottom: 10px; color: var(--primary-red);"></h3>
+      <iframe id="videoPlayerFrame" src="" allowfullscreen></iframe>
     </div>
   </div>
 
   <script>
-    // Sua chave do TMDb configurada
     const TMDB_API_KEY = '8e6a4fe3b8b0c240511a0c5cc382ca81';
 
-    // Lista de filmes salva direto no navegador (localStorage para não apagar ao atualizar)
-    let listaFilmes = JSON.parse(localStorage.getItem('gs_filmes')) || [];
+    async function buscarFilmeAutomatico() {
+      const termo = document.getElementById('searchInput').value.trim();
+      const catalogDiv = document.getElementById('movieCatalog');
 
-    // Desenha os filmes na tela ao abrir a página
-    window.onload = function() {
-      atualizarCatalogo();
-    };
-
-    async function adicionarFilme() {
-      const nomeFilme = document.getElementById('movieNameInput').value.trim();
-      const linkVideo = document.getElementById('movieUrlInput').value.trim();
-      const statusMsg = document.getElementById('statusMsg');
-
-      if (!nomeFilme || !linkVideo) {
-        alert("Preencha o nome do filme e cole o link do vídeo!");
+      if (!termo) {
+        alert("Digite o nome de um filme ou série!");
         return;
       }
 
-      statusMsg.style.display = 'block';
-      statusMsg.style.color = '#fff';
-      statusMsg.innerText = "Buscando capa e sinopse no TMDb...";
+      catalogDiv.innerHTML = '<p style="color: var(--text-gray);">Pesquisando na web...</p>';
 
       try {
-        // Busca automática no TMDb pelo nome digitado
-        const resposta = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&language=pt-BR&query=${encodeURIComponent(nomeFilme)}`);
+        // Busca automática no banco de dados global do TMDb
+        const resposta = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&language=pt-BR&query=${encodeURIComponent(termo)}`);
         const dados = await resposta.json();
 
         if (!dados.results || dados.results.length === 0) {
-          throw new Error("Filme não encontrado no TMDb. Verifique a digitação.");
+          catalogDiv.innerHTML = '<p style="color: var(--text-gray);">Nenhum resultado encontrado.</p>';
+          return;
         }
 
-        const info = dados.results[0];
+        catalogDiv.innerHTML = '';
 
-        // Monta o objeto do filme
-        const novoFilme = {
-          id: Date.now(),
-          title: info.title,
-          poster: info.poster_path ? `https://image.tmdb.org/t/p/w500${info.poster_path}` : 'https://via.placeholder.com/500x750?text=Sem+Capa',
-          rating: info.vote_average ? info.vote_average.toFixed(1) : '0.0',
-          overview: info.overview || 'Sinopse indisponível.',
-          videoUrl: linkVideo
-        };
+        // Exibe todos os resultados parecidos encontrados na internet
+        dados.results.forEach(filme => {
+          if (!filme.poster_path) return; // Pula se não tiver capa
 
-        // Salva na lista e atualiza o armazenamento local
-        listaFilmes.push(novoFilme);
-        localStorage.setItem('gs_filmes', JSON.stringify(listaFilmes));
+          const card = document.createElement('div');
+          card.className = 'movie-card';
+          
+          // ID do TMDb usado para gerar o player de streaming automático via embeds públicos de vídeo
+          const tmdbId = filme.id;
+          const titulo = filme.title;
+          const poster = `https://image.tmdb.org/t/p/w500${filme.poster_path}`;
+          const rating = filme.vote_average ? filme.vote_average.toFixed(1) : '0.0';
+          const overview = filme.overview || 'Sinopse indisponível.';
 
-        atualizarCatalogo();
+          card.onclick = () => abrirPlayerAutomatico(titulo, tmdbId);
 
-        statusMsg.style.color = '#00C851';
-        statusMsg.innerText = "Filme adicionado com sucesso!";
-        
-        // Limpa os campos
-        document.getElementById('movieNameInput').value = '';
-        document.getElementById('movieUrlInput').value = '';
-
-        setTimeout(() => { statusMsg.style.display = 'none'; }, 3000);
+          card.innerHTML = `
+            <img src="${poster}" alt="${titulo}">
+            <div class="movie-info">
+              <div class="movie-title">${titulo}</div>
+              <span class="movie-rating">★ ${rating} / 10</span>
+              <div class="movie-desc">${overview}</div>
+            </div>
+          `;
+          catalogDiv.appendChild(card);
+        });
 
       } catch (erro) {
-        statusMsg.style.color = '#E50914';
-        statusMsg.innerText = erro.message;
+        catalogDiv.innerHTML = '<p style="color: #E50914;">Erro ao realizar a busca.</p>';
       }
     }
 
-    function atualizarCatalogo() {
-      const catalogoDiv = document.getElementById('movieCatalog');
-      catalogoDiv.innerHTML = '';
-
-      if (listaFilmes.length === 0) {
-        catalogoDiv.innerHTML = '<p style="color: var(--text-gray);">Nenhum filme cadastrado ainda.</p>';
-        return;
-      }
-
-      listaFilmes.forEach(filme => {
-        const card = document.createElement('div');
-        card.className = 'movie-card';
-        card.onclick = () => abrirPlayer(filme.title, filme.videoUrl);
-
-        card.innerHTML = `
-          <img src="${filme.poster}" alt="${filme.title}">
-          <div class="movie-info">
-            <div class="movie-title">${filme.title}</div>
-            <span class="movie-rating">★ ${filme.rating} / 10</span>
-            <div class="movie-desc">${filme.overview}</div>
-          </div>
-        `;
-        catalogoDiv.appendChild(card);
-      });
-    }
-
-    function abrirPlayer(titulo, url) {
+    function abrirPlayerAutomatico(titulo, idFilme) {
       document.getElementById('playingTitle').innerText = titulo;
-      const player = document.getElementById('mainVideoPlayer');
-      player.src = url;
+      const iframe = document.getElementById('videoPlayerFrame');
+      
+      // Conecta automaticamente ao player incorporado universal usando o ID do TMDb (Padrão similar a players abertos da web)
+      iframe.src = `https://vidsrc.xyz/embed/movie?tmdb=${idFilme}`;
+      
       document.getElementById('playerModal').style.display = 'flex';
-      player.play();
     }
 
-    function fecharPlayer() {
-      const player = document.getElementById('mainVideoPlayer');
-      player.pause();
-      player.src = '';
-      document.getElementById('playerModal').style.display = 'none';
-    }
   </script>
 </body>
 </html>
