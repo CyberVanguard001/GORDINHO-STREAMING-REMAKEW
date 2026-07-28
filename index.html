@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GS - Gordinho Streaming</title>
   <style>
-    /* Reset e Variáveis */
     :root {
       --bg-color: #000000;
       --panel-bg: #141414;
@@ -25,6 +24,7 @@
     body {
       background-color: var(--bg-color);
       color: var(--text-white);
+      padding-bottom: 50px;
     }
 
     /* Cabeçalho */
@@ -54,7 +54,7 @@
       margin-left: 5px;
     }
 
-    /* Painel de Upload (Administração) */
+    /* Painel de Controle (Adicionar por Link) */
     .admin-panel {
       background-color: var(--panel-bg);
       margin: 30px auto;
@@ -66,19 +66,19 @@
     }
 
     .admin-panel h2 {
-      margin-bottom: 20px;
-      font-size: 22px;
+      margin-bottom: 15px;
+      font-size: 20px;
     }
 
     .form-group {
       display: flex;
-      gap: 15px;
+      flex-direction: column;
+      gap: 12px;
       margin-bottom: 15px;
-      flex-wrap: wrap;
     }
 
-    input[type="text"], input[type="file"] {
-      flex: 1;
+    input[type="text"] {
+      width: 100%;
       padding: 12px;
       background-color: #222;
       border: 1px solid #444;
@@ -107,14 +107,13 @@
       background-color: var(--hover-red);
     }
 
-    #uploadStatus {
-      margin-top: 10px;
+    #statusMsg {
       font-size: 14px;
-      color: #00C851;
+      margin-top: 8px;
       display: none;
     }
 
-    /* Catálogo de Filmes */
+    /* Catálogo */
     .catalog-section {
       padding: 20px 50px;
     }
@@ -122,6 +121,8 @@
     .catalog-section h2 {
       margin-bottom: 20px;
       font-size: 24px;
+      border-left: 4px solid var(--primary-red);
+      padding-left: 10px;
     }
 
     .movie-grid {
@@ -136,12 +137,12 @@
       overflow: hidden;
       cursor: pointer;
       transition: transform 0.3s ease;
-      position: relative;
+      border: 1px solid #333;
     }
 
     .movie-card:hover {
       transform: scale(1.05);
-      box-shadow: 0 0 15px rgba(229, 9, 20, 0.4);
+      border-color: var(--primary-red);
     }
 
     .movie-card img {
@@ -163,17 +164,12 @@
       text-overflow: ellipsis;
     }
 
-    .movie-meta {
-      display: flex;
-      justify-content: space-between;
-      color: var(--text-gray);
-      font-size: 13px;
-      margin-bottom: 10px;
-    }
-
     .movie-rating {
-      color: #46d369; /* Verde estilo Netflix para relevância */
+      color: #46d369;
       font-weight: bold;
+      font-size: 13px;
+      margin-bottom: 8px;
+      display: block;
     }
 
     .movie-desc {
@@ -185,11 +181,11 @@
       overflow: hidden;
     }
 
-    /* Modal do Player */
+    /* Player Modal */
     .modal-overlay {
       position: fixed;
       top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.9);
+      background: rgba(0, 0, 0, 0.95);
       display: none;
       justify-content: center;
       align-items: center;
@@ -198,7 +194,7 @@
 
     .player-box {
       width: 90%;
-      max-width: 900px;
+      max-width: 950px;
       background: #000;
       border: 2px solid var(--primary-red);
       border-radius: 8px;
@@ -211,17 +207,18 @@
       top: 10px;
       right: 15px;
       color: var(--text-white);
-      font-size: 24px;
+      font-size: 28px;
       cursor: pointer;
       background: none;
       border: none;
-      padding: 0;
     }
 
     video {
       width: 100%;
+      max-height: 550px;
       border-radius: 4px;
       outline: none;
+      background: #111;
     }
   </style>
 </head>
@@ -231,144 +228,140 @@
     <div class="logo">GS <span>GORDINHO STREAMING</span></div>
   </header>
 
-  <!-- PAINEL DE UPLOAD -->
+  <!-- PAINEL DE CADASTRO POR LINK -->
   <div class="admin-panel">
-    <h2>Adicionar Novo Filme</h2>
+    <h2>Adicionar Filme ao Catálogo</h2>
     <div class="form-group">
-      <input type="text" id="movieSearchName" placeholder="Ex: Vingadores Ultimato">
-      <input type="file" id="movieVideoFile" accept="video/*">
+      <input type="text" id="movieNameInput" placeholder="Nome exato do filme (Ex: Homem-Aranha)">
+      <input type="text" id="movieUrlInput" placeholder="Cole o link direto do vídeo (.mp4 ou link de streaming)">
     </div>
-    <button onclick="processMovieUpload()">Buscar no TMDb e Fazer Upload</button>
-    <div id="uploadStatus">Processando... Aguarde.</div>
+    <button onclick="adicionarFilme()">Puxar do TMDb e Adicionar</button>
+    <div id="statusMsg"></div>
   </div>
 
   <!-- CATÁLOGO -->
   <div class="catalog-section">
-    <h2>Meus Filmes</h2>
+    <h2>Filmes Disponíveis</h2>
     <div class="movie-grid" id="movieCatalog">
-      <!-- Os filmes adicionados aparecerão aqui -->
+      <!-- Os filmes adicionados aparecem aqui -->
     </div>
   </div>
 
   <!-- MODAL DO PLAYER -->
   <div class="modal-overlay" id="playerModal">
     <div class="player-box">
-      <button class="close-btn" onclick="closePlayer()">×</button>
+      <button class="close-btn" onclick="fecharPlayer()">×</button>
       <h3 id="playingTitle" style="margin-bottom: 15px; color: var(--primary-red);"></h3>
-      <video id="mainVideoPlayer" controls></video>
+      <video id="mainVideoPlayer" controls autoplay></video>
     </div>
   </div>
 
   <script>
-    // COLOCAR SUA CHAVE DO TMDB AQUI
-    const TMDB_API_KEY = '8e6a4fe3b8b0c240511a0c5cc382ca81'; 
+    // Sua chave do TMDb configurada
+    const TMDB_API_KEY = '8e6a4fe3b8b0c240511a0c5cc382ca81';
 
-    // Array para guardar os filmes na sessão
-    let myMovies = [];
+    // Lista de filmes salva direto no navegador (localStorage para não apagar ao atualizar)
+    let listaFilmes = JSON.parse(localStorage.getItem('gs_filmes')) || [];
 
-    async function processMovieUpload() {
-      const searchName = document.getElementById('movieSearchName').value;
-      const videoFile = document.getElementById('movieVideoFile').files[0];
-      const statusText = document.getElementById('uploadStatus');
+    // Desenha os filmes na tela ao abrir a página
+    window.onload = function() {
+      atualizarCatalogo();
+    };
 
-      if (!searchName || !videoFile) {
-        alert("Preencha o nome do filme e selecione um arquivo de vídeo!");
+    async function adicionarFilme() {
+      const nomeFilme = document.getElementById('movieNameInput').value.trim();
+      const linkVideo = document.getElementById('movieUrlInput').value.trim();
+      const statusMsg = document.getElementById('statusMsg');
+
+      if (!nomeFilme || !linkVideo) {
+        alert("Preencha o nome do filme e cole o link do vídeo!");
         return;
       }
 
-      statusText.style.display = 'block';
-      statusText.style.color = '#fff';
-      statusText.innerText = "Buscando informações no TMDb...";
+      statusMsg.style.display = 'block';
+      statusMsg.style.color = '#fff';
+      statusMsg.innerText = "Buscando capa e sinopse no TMDb...";
 
       try {
-        // 1. Busca os dados no TMDb
-        const tmdbResponse = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&language=pt-BR&query=${encodeURIComponent(searchName)}`);
-        const tmdbData = await tmdbResponse.json();
+        // Busca automática no TMDb pelo nome digitado
+        const resposta = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&language=pt-BR&query=${encodeURIComponent(nomeFilme)}`);
+        const dados = await resposta.json();
 
-        if (!tmdbData.results || tmdbData.results.length === 0) {
-          alert("Filme não encontrado no TMDb. Verifique o nome.");
-          statusText.style.display = 'none';
-          return;
+        if (!dados.results || dados.results.length === 0) {
+          throw new Error("Filme não encontrado no TMDb. Verifique a digitação.");
         }
 
-        const movieInfo = tmdbData.results[0]; // Pega o primeiro resultado
+        const info = dados.results[0];
 
-        // 2. Lógica de Upload do Vídeo
-        // Para testes locais na tela, criamos uma URL temporária.
-        // É AQUI que você deve integrar o script do Firebase Storage para hospedar o arquivo na nuvem.
-        statusText.innerText = "Simulando Upload do Vídeo...";
-        const videoUrl = URL.createObjectURL(videoFile); 
-
-        /* 
-          EXEMPLO DE INTEGRAÇÃO FIREBASE (Descomente e configure no seu projeto):
-          const storageRef = firebase.storage().ref('filmes/' + videoFile.name);
-          await storageRef.put(videoFile);
-          const videoUrl = await storageRef.getDownloadURL(); 
-        */
-
-        // 3. Monta o Objeto do Filme
-        const newMovie = {
+        // Monta o objeto do filme
+        const novoFilme = {
           id: Date.now(),
-          title: movieInfo.title,
-          poster: `https://image.tmdb.org/t/p/w500${movieInfo.poster_path}`,
-          rating: movieInfo.vote_average.toFixed(1),
-          overview: movieInfo.overview,
-          videoSrc: videoUrl
+          title: info.title,
+          poster: info.poster_path ? `https://image.tmdb.org/t/p/w500${info.poster_path}` : 'https://via.placeholder.com/500x750?text=Sem+Capa',
+          rating: info.vote_average ? info.vote_average.toFixed(1) : '0.0',
+          overview: info.overview || 'Sinopse indisponível.',
+          videoUrl: linkVideo
         };
 
-        // 4. Adiciona ao catálogo e limpa o formulário
-        myMovies.push(newMovie);
-        renderCatalog();
+        // Salva na lista e atualiza o armazenamento local
+        listaFilmes.push(novoFilme);
+        localStorage.setItem('gs_filmes', JSON.stringify(listaFilmes));
+
+        atualizarCatalogo();
+
+        statusMsg.style.color = '#00C851';
+        statusMsg.innerText = "Filme adicionado com sucesso!";
         
-        statusText.style.color = '#00C851';
-        statusText.innerText = "Upload concluído! Filme adicionado ao catálogo.";
-        document.getElementById('movieSearchName').value = '';
-        document.getElementById('movieVideoFile').value = '';
+        // Limpa os campos
+        document.getElementById('movieNameInput').value = '';
+        document.getElementById('movieUrlInput').value = '';
 
-        setTimeout(() => { statusText.style.display = 'none'; }, 3000);
+        setTimeout(() => { statusMsg.style.display = 'none'; }, 3000);
 
-      } catch (error) {
-        console.error("Erro:", error);
-        statusText.style.color = 'red';
-        statusText.innerText = "Ocorreu um erro no processamento.";
+      } catch (erro) {
+        statusMsg.style.color = '#E50914';
+        statusMsg.innerText = erro.message;
       }
     }
 
-    function renderCatalog() {
-      const catalog = document.getElementById('movieCatalog');
-      catalog.innerHTML = '';
+    function atualizarCatalogo() {
+      const catalogoDiv = document.getElementById('movieCatalog');
+      catalogoDiv.innerHTML = '';
 
-      myMovies.forEach(movie => {
+      if (listaFilmes.length === 0) {
+        catalogoDiv.innerHTML = '<p style="color: var(--text-gray);">Nenhum filme cadastrado ainda.</p>';
+        return;
+      }
+
+      listaFilmes.forEach(filme => {
         const card = document.createElement('div');
         card.className = 'movie-card';
-        card.onclick = () => openPlayer(movie.title, movie.videoSrc);
-        
+        card.onclick = () => abrirPlayer(filme.title, filme.videoUrl);
+
         card.innerHTML = `
-          <img src="${movie.poster}" alt="${movie.title}">
+          <img src="${filme.poster}" alt="${filme.title}">
           <div class="movie-info">
-            <div class="movie-title">${movie.title}</div>
-            <div class="movie-meta">
-              <span class="movie-rating">${movie.rating * 10}% Relevante</span>
-            </div>
-            <div class="movie-desc">${movie.overview || 'Sinopse não disponível.'}</div>
+            <div class="movie-title">${filme.title}</div>
+            <span class="movie-rating">★ ${filme.rating} / 10</span>
+            <div class="movie-desc">${filme.overview}</div>
           </div>
         `;
-        catalog.appendChild(card);
+        catalogoDiv.appendChild(card);
       });
     }
 
-    function openPlayer(title, src) {
-      document.getElementById('playingTitle').innerText = title;
+    function abrirPlayer(titulo, url) {
+      document.getElementById('playingTitle').innerText = titulo;
       const player = document.getElementById('mainVideoPlayer');
-      player.src = src;
+      player.src = url;
       document.getElementById('playerModal').style.display = 'flex';
       player.play();
     }
 
-    function closePlayer() {
+    function fecharPlayer() {
       const player = document.getElementById('mainVideoPlayer');
       player.pause();
-      player.src = ''; // Limpa o vídeo para economizar memória
+      player.src = '';
       document.getElementById('playerModal').style.display = 'none';
     }
   </script>
